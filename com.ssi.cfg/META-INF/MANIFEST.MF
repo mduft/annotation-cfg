@@ -5,4 +5,5 @@ Bundle-SymbolicName: com.ssi.cfg
 Bundle-Version: 1.0.0.qualifier
 Export-Package: com.ssi.cfg
 Bundle-Vendor: SSI Schaefer IT Solutions GmbH
-Require-Bundle: org.junit;resolution:=optional
+Require-Bundle: org.junit;resolution:=optional,
+ com.google.guava
