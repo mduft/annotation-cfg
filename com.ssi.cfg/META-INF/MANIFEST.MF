@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Annotation based Configuration Mapper
+Bundle-SymbolicName: com.ssi.cfg
+Bundle-Version: 1.0.0.qualifier
+Export-Package: com.ssi.cfg
+Bundle-Vendor: SSI Schaefer IT Solutions GmbH
+Require-Bundle: org.junit;resolution:=optional
