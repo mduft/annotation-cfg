@@ -1,9 +1,21 @@
-/*
- * Copyright (c) SSI Schaefer IT Solutions
- */
+/*******************************************************************************
+ *  Copyright (c) 2017 SSI Schaefer IT Solutions GmbH and others.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  which accompanies this distribution, and is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      SSI Schaefer IT Solutions GmbH
+ *******************************************************************************/
 package com.ssi.cfg;
 
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -16,11 +28,34 @@ import java.util.TreeMap;
 
 import com.google.common.base.Splitter;
 
+/**
+ * The {@link Configuration} is basically a wrapper around a {@link Map} which exposes access to the {@link Map} through
+ * {@link Annotation}s.
+ * <p>
+ * Any arbitrary {@link Annotation} can be defined, including default values, and mapped to the {@link Configuration} using
+ * {@link #get(Class)}.
+ * <p>
+ * The mapped {@link Annotation} will access the underlying {@link Map} on every method call. If a key exists in the {@link Map}
+ * that corresponds to the name of the {@link Annotation}'s {@link Method}, it will be converted to the target type and returned.
+ * Otherwise the default value of the {@link Method} is returned.
+ * <p>
+ * It is possible to put arbitrary {@link Object}s into the {@link Map} using {@link #add(Map)}. There is no validation on the
+ * types passed, but they are in reality restricted to types that are valid return types for {@link Annotation} {@link Method}s.
+ * Using any other types will result in an {@link Exception}.
+ * <p>
+ * There is (limited) type conversion capabilities. Mainly this functionality exists to be able to map {@link String}s (e.g. when
+ * mapping a command line using {@link #add(String...)}) to the target types of the {@link Annotation} {@link Method}s.
+ */
 public class Configuration {
 
     private final Map<String, Object> objects = new TreeMap<>();
     private final Map<Method, Object> conversions = new HashMap<>();
 
+    /**
+     * Add a set of command line arguments to the mapping. Arguments must currently start with '--'.
+     *
+     * @param arguments the command line argument as passed to the program.
+     */
     public void add(String... arguments) {
         for (String arg : arguments) {
             if (arg.startsWith("--")) {
@@ -41,25 +76,51 @@ public class Configuration {
         }
     }
 
+    /**
+     * Adds arbitrary entries to the mapping. See the class documentation for more information on supported types and implicit
+     * conversions.
+     *
+     * @param arguments the entries to add to the mapping.
+     */
     public void add(Map<String, ?> arguments) {
         objects.putAll(arguments);
     }
 
+    /**
+     * Adds arbitrary ({@link String}) properties to the mapping.
+     * <p>
+     * Typically used to add a configuration file or system properties to the mapping
+     *
+     * @param properties the entries to add to the mapping.
+     */
     public void add(Properties properties) {
         properties.forEach((k, v) -> objects.put((String) k, v));
     }
 
+    /**
+     * Returns an instance of the given {@link Annotation}, mapping each {@link Method} to a value in the mapping where the
+     * {@link Method} name is the key into the wrapped {@link Map}.
+     *
+     * @param target the {@link Class} to map this {@link Configuration} to.
+     * @return a proxy mapping to the {@link Configuration}.
+     */
     @SuppressWarnings("unchecked")
     public <T extends Annotation> T get(Class<T> target) {
         return (T) Proxy.newProxyInstance(target.getClassLoader(), new Class[] { target }, this::doMap);
     }
 
     private Object doMap(Object proxy, Method method, Object[] arguments) {
-        if (!objects.containsKey(method.getName()) && !method.getReturnType().isAnnotation()) {
+        String key = method.getName();
+        ConfigurationNameMapping mapping = method.getAnnotation(ConfigurationNameMapping.class);
+        if (mapping != null) {
+            key = mapping.value();
+        }
+
+        if (!objects.containsKey(key) && !method.getReturnType().isAnnotation()) {
             return method.getDefaultValue();
         }
 
-        return doConvert(method, objects.get(method.getName()));
+        return doConvert(method, objects.get(key));
     }
 
     private Object doConvert(Method method, Object object) {
@@ -95,7 +156,7 @@ public class Configuration {
     }
 
     @SuppressWarnings("unchecked")
-    public Object convertType(Class<?> target, String source) {
+    private Object convertType(Class<?> target, String source) {
         if (target.equals(String.class)) {
             return source;
         } else if (target.equals(long.class)) {
@@ -128,7 +189,7 @@ public class Configuration {
             }
         } else if (target.isArray()) {
             List<String> split = Splitter.on(',').trimResults().omitEmptyStrings().splitToList(source);
-            Object targetArray = Array.newInstance(target, split.size());
+            Object targetArray = Array.newInstance(target.getComponentType(), split.size());
             for (int i = 0; i < split.size(); ++i) {
                 Array.set(targetArray, i, convertType(target.getComponentType(), split.get(i)));
             }
@@ -138,5 +199,19 @@ public class Configuration {
         }
 
         throw new IllegalStateException("Unsupported conversion to " + target);
+    }
+
+    /**
+     * Maps the annotated method to another property name in the context.
+     * <p>
+     * This can be used to map an arbitrary {@link Annotation} {@link Method} to another name, e.g. to access system properties
+     * with property names that are not valid method names in Java.
+     */
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface ConfigurationNameMapping {
+
+        String value();
     }
 }
