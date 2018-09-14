@@ -20,6 +20,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +57,8 @@ public class Configuration {
      *
      * @param arguments the command line argument as passed to the program.
      */
-    public void add(String... arguments) {
+    @SuppressWarnings("unchecked")
+	public void add(String... arguments) {
         for (String arg : arguments) {
             if (arg.startsWith("--")) {
                 String stripped = arg.substring(2);
@@ -64,8 +66,20 @@ public class Configuration {
                 if (equalsIndex != -1) {
                     String key = stripped.substring(0, equalsIndex);
                     String value = stripped.substring(equalsIndex + 1);
-
-                    objects.put(key, value);
+                    
+                    if(objects.containsKey(key)) {
+                    	Object existing = objects.get(key);
+                    	if(existing instanceof List) {
+                    		((List<Object>)existing).add(value);
+                    	} else {
+                    		List<Object> l = new ArrayList<>();
+                    		l.add(existing);
+                    		l.add(value);
+                    		objects.put(key, l);
+                    	}
+                    } else {
+                    	objects.put(key, value);
+                    }
                 } else {
                     objects.put(stripped, Boolean.TRUE);
                 }
@@ -138,6 +152,17 @@ public class Configuration {
         if (returnType.isPrimitive() && !(object instanceof String)) {
             // implicit conversion through boxing/unboxing. let's just hope the types match ;)
             return object;
+        }
+        
+        if(object instanceof List && returnType.isArray()) {
+        	List<?> list = (List<?>)object;
+        	// perform conversion for each of the elements.
+        	Object targetArray = Array.newInstance(returnType.getComponentType(), list.size());
+            for (int i = 0; i < list.size(); ++i) {
+                Array.set(targetArray, i, convertType(returnType.getComponentType(), (String)list.get(i)));
+            }
+            conversions.put(method, targetArray);
+            return targetArray;
         }
 
         // check source type

@@ -47,6 +47,23 @@ public class ConversionTest {
         assertEquals(tc.testLongArray()[3], 4);
         assertEquals(tc.testLongArray()[4], 5);
     }
+    
+    @Test
+    public void testMultiAdd() {
+    	Configuration c = new Configuration();
+    	c.add("--testStringArray=1");
+    	c.add("--testStringArray=2");
+    	c.add("--testStringArray=3");
+    	c.add("--testStringArray=4");
+    	
+    	TestConfig tc = c.get(TestConfig.class);
+    	
+    	assertEquals(tc.testStringArray().length, 4);
+    	assertEquals(tc.testStringArray()[0], "1");
+        assertEquals(tc.testStringArray()[1], "2");
+        assertEquals(tc.testStringArray()[2], "3");
+        assertEquals(tc.testStringArray()[3], "4");
+    }
 
     private @interface TestConfig {
 
