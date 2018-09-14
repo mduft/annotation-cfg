@@ -64,6 +64,19 @@ public class ConversionTest {
         assertEquals(tc.testStringArray()[2], "3");
         assertEquals(tc.testStringArray()[3], "4");
     }
+    
+    @Test
+    public void testEqualsSign() {
+    	Configuration c = new Configuration();
+    	c.add("--testStringArray=this=test");
+    	c.add("--testStringArray=some=other");
+    	
+    	TestConfig tc = c.get(TestConfig.class);
+    	
+    	assertEquals(tc.testStringArray().length, 2);
+    	assertEquals(tc.testStringArray()[0], "this=test");
+        assertEquals(tc.testStringArray()[1], "some=other");
+    }
 
     private @interface TestConfig {
 
