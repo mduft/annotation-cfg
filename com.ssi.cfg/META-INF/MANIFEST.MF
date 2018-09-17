@@ -7,3 +7,5 @@ Export-Package: com.ssi.cfg
 Bundle-Vendor: SSI Schaefer IT Solutions GmbH
 Require-Bundle: org.junit;resolution:=optional,
  com.google.guava
+Automatic-Module-Name: com.ssi.cfg
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
