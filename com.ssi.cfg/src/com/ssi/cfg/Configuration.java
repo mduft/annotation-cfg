@@ -246,7 +246,8 @@ public class Configuration {
 		for (Method m : cfg.getDeclaredMethods()) {
 			Help h = m.getAnnotation(Help.class);
 			if (h != null) {
-				target.println(indent + String.format("%1$20s=ARG: %2$s", "--" + m.getName(), h.value()));
+				target.println(indent
+						+ String.format("%1$20s%2$4s: %3$s", "--" + m.getName(), h.arg() ? "=ARG" : "", h.value()));
 			} else {
 				target.println(indent + m.getName());
 			}
@@ -272,6 +273,15 @@ public class Configuration {
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(value = { ElementType.METHOD, ElementType.TYPE })
 	public @interface Help {
+		/**
+		 * @return the help text for the annotated element.
+		 */
 		String value();
+
+		/**
+		 * @return whether the option accepts an argument (will be rendered accordingly
+		 *         in help text).
+		 */
+		boolean arg() default true;
 	}
 }
